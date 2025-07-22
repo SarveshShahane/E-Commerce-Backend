@@ -1,7 +1,18 @@
 import express from "express";
-import connectDB from "./config/db";
+import connectDB from "./config/db.js";
+import dotenv from "dotenv";
+dotenv.config();
+import productRoutes from "./routes/product.routes.js";
+import authRoutes from "./routes/auth.routes.js";
 const app = express();
 
+
+app.use(express.json());
+app.use(express.urlencoded({extended: true}));
+
+// Routes
+app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
 connectDB()
   .then(() => {
     app.listen(process.env.PORT, () => {
