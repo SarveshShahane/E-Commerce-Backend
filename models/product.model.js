@@ -26,7 +26,7 @@ const productSchema = new mongoose.Schema({
       type: String,
       required: true,
     }
-  }], // Changed from [String] to array of objects
+  }], 
   stock: {
     type: Number,
     required: true,

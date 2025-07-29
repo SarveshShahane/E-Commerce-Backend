@@ -4,21 +4,19 @@ import asyncHandler from "express-async-handler";
 import { generateToken } from "../middlewares/auth.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, password, role = "buyer" } = req.body; // Default role to buyer
+  const { name, email, password, role = "buyer" } = req.body; 
   
   if (!name || !email || !password) {
     res.status(400);
     throw new Error("Please fill all fields");
   }
   
-  // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     res.status(400);
     throw new Error("Please provide a valid email");
   }
   
-  // Validate password strength
   if (password.length < 6) {
     res.status(400);
     throw new Error("Password must be at least 6 characters long");
@@ -30,7 +28,7 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new Error("User already exists");
   }
   
-  const hashedPassword = await bcrypt.hash(password, 12); // Increased salt rounds
+  const hashedPassword = await bcrypt.hash(password, 12); 
   
   const user = await User.create({
     name,
@@ -45,7 +43,7 @@ const registerUser = asyncHandler(async (req, res) => {
     // Set cookie
     res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // HTTPS in production
+      secure: process.env.NODE_ENV === "production", 
       sameSite: "strict",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
@@ -59,7 +57,7 @@ const registerUser = asyncHandler(async (req, res) => {
         email: user.email,
         role: user.role,
       },
-      token, // Include token for frontend storage if needed
+      token,
     });
   } else {
     res.status(400);
@@ -89,7 +87,6 @@ const loginUser = asyncHandler(async (req, res) => {
   
   const token = generateToken(user);
   
-  // Set cookie
   res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -106,7 +103,7 @@ const loginUser = asyncHandler(async (req, res) => {
       email: user.email,
       role: user.role,
     },
-    token, // Include token for frontend storage if needed
+    token, 
   });
 });
 
@@ -123,7 +120,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   });
 });
 
-// Get current user profile
+
 const getProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select('-password');
   

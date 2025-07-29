@@ -9,14 +9,13 @@ const generateToken = (user) => {
       role: user.role,
     },
     process.env.JWT_SECRET,
-    { expiresIn: "24h" } // Extended to 24h for better UX
+    { expiresIn: "24h" } 
   );
 };
 
 const authMiddleware = async (req, res, next) => {
   let token;
   
-  // Check for token in cookie first, then Authorization header
   if (req.cookies.token) {
     token = req.cookies.token;
   } else if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
@@ -29,7 +28,7 @@ const authMiddleware = async (req, res, next) => {
   
   try {
     const decoded = jsonwebtoken.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select('-password'); // Exclude password
+    const user = await User.findById(decoded.id).select('-password'); 
     
     if (!user) {
       return res.status(404).json({ message: "User not found" });

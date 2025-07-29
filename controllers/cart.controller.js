@@ -55,7 +55,6 @@ const updateCart = asyncHandler(async (req, res) => {
 
   cart.products[productIndex].quantity = quantity;
 
-  // Recalculate totalPrice safely
   let total = 0;
   for (const item of cart.products) {
     const prod = await Product.findById(item.productId);
@@ -68,22 +67,5 @@ const updateCart = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Cart updated successfully", cart });
 });
 
-
-// const clearCart = asyncHandler(async (req, res) => {
-//   const { id } = req.params;
-//   const cart = await Cart.findById(id);
-//   if (!cart) {
-//     return res.status(404).json({ message: "Cart not found" });
-//   }
-//   const user = await User.findById(req.user._id);
-//   if (!user) {
-//     return res.status(404).json({ message: "User not found" });
-//   }
-//   if (user._id.toString() !== cart.userId.toString()) {
-//     return res.status(403).json({ message: "Access denied" });
-//   }
-//   await Cart.deleteOne({ userId: req.user._id });
-//   res.status(200).json({ message: "Cart cleared successfully" });
-// });
 
 export { addToCart };
