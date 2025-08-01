@@ -1,6 +1,5 @@
 import asyncHandler from "express-async-handler";
 import Product from "../models/product.model.js";
-import User from "../models/user.model.js";
 import mongoose from "mongoose";
 const createProduct = asyncHandler(async (req, res) => {
   const { name, description, price, category, stock } = req.body;
@@ -40,6 +39,51 @@ const createProduct = asyncHandler(async (req, res) => {
     product: newProduct,
   });
 });
+const getAllProducts = asyncHandler(async (req, res) => {
+  const {
+    page = 1,
+    limit = 12,
+    category,
+    search,
+    minPrice,
+    maxPrice,
+  } = req.query;
+
+  const query = {};
+
+  if (category) {
+    query.category = { $regex: category, $options: "i" };
+  }
+
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  if (minPrice || maxPrice) {
+    query.price = {};
+    if (minPrice) query.price.$gte = Number(minPrice);
+    if (maxPrice) query.price.$lte = Number(maxPrice);
+  }
+
+  const products = await Product.find(query)
+    .populate("sellerId", "name email")
+    .sort({ createdAt: -1 })
+    .limit(limit * 1)
+    .skip((page - 1) * limit);
+
+  const total = await Product.countDocuments(query);
+
+  res.status(200).json({
+    success: true,
+    products,
+    totalPages: Math.ceil(total / limit),
+    currentPage: page,
+    total,
+  });
+});
 
 const getProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -69,7 +113,12 @@ const getProduct = asyncHandler(async (req, res) => {
       },
     },
   ]);
-  res.status(200).json({ product });
+    if (!product || product.length === 0) {
+    res.status(404);
+    throw new Error("Product not found");
+  }
+
+   res.status(200).json({ product });
 });
 
 const updateProduct = asyncHandler(async (req, res) => {
@@ -121,4 +170,10 @@ const deleteProduct = asyncHandler(async (req, res) => {
   res.status(200).json({ message: "Product deleted successfully" });
 });
 
-export { createProduct, getProduct, updateProduct, deleteProduct };
+export {
+  createProduct,
+  getProduct,
+  updateProduct,
+  deleteProduct,
+  getAllProducts,
+};

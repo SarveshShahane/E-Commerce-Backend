@@ -22,6 +22,18 @@ const userSchema = new Schema({
     enum: ["buyer", "seller", "admin"],
     default: "user",
   },
+  verificationCode: {
+    type: String,
+    required: true,
+  },
+  verificationStatus: {
+    type: Boolean,
+    default: false,
+  },
+  verificationCodeExpiration: {
+    type: Date,
+    required: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

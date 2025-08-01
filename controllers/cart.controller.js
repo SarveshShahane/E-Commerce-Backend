@@ -1,71 +1,110 @@
-import User from "../models/user.model.js";
-import Cart from "../models/cart.model.js";
-import Product from "../models/product.model.js";
-import asyncHandler from "express-async-handler";
+import asyncHandler from 'express-async-handler';
+import Cart from '../models/cart.model.js';
+import Product from '../models/product.model.js';
 
 const addToCart = asyncHandler(async (req, res) => {
-  const { productId, quantity } = req.body;
+  const { productId, quantity = 1 } = req.body;
+  const userId = req.user._id;
+  
   const product = await Product.findById(productId);
   if (!product) {
-    return res.status(404).json({ message: "Product not found" });
+    res.status(404);
+    throw new Error('Product not found');
   }
-  const totalPrice = product.price * quantity;
-  const cart = await Cart.findOne({ userId: req.user._id });
-  if (cart) {
-    const existingProduct = cart.products.find(
-      (p) => p.productId.toString() === productId
-    );
-    if (existingProduct) {
-      existingProduct.quantity += quantity;
-    } else {
-      cart.products.push({ productId, quantity });
-    }
-    cart.totalPrice += totalPrice;
-    await cart.save();
-  } else {
-    const newCart = await Cart.create({
-      userId: req.user._id,
-      products: [{ productId, quantity }],
-      totalPrice: totalPrice,
-    });
-    await newCart.save();
+  
+  if (product.stock < quantity) {
+    res.status(400);
+    throw new Error('Insufficient stock');
   }
-  res.status(200).json({ message: "Product added to cart successfully" });
-});
-
-const updateCart = asyncHandler(async (req, res) => {
-  const { productId, quantity } = req.body;
-
-  const cart = await Cart.findOne({ userId: req.user._id });
+  
+  let cart = await Cart.findOne({ user: userId });
+  
   if (!cart) {
-    return res.status(404).json({ message: "Cart not found" });
+    cart = new Cart({ user: userId, items: [] });
   }
-
-  const productIndex = cart.products.findIndex(
-    (p) => p.productId.toString() === productId
+  
+  const existingItem = cart.items.find(item => 
+    item.product.toString() === productId
   );
-  if (productIndex === -1) {
-    return res.status(404).json({ message: "Product not found in cart" });
+  
+  if (existingItem) {
+    existingItem.quantity += quantity;
+  } else {
+    cart.items.push({ product: productId, quantity });
   }
-
-  const productDoc = await Product.findById(productId);
-  if (!productDoc) {
-    return res.status(404).json({ message: "Product not found" });
-  }
-
-  cart.products[productIndex].quantity = quantity;
-
-  let total = 0;
-  for (const item of cart.products) {
-    const prod = await Product.findById(item.productId);
-    total += item.quantity * prod.price;
-  }
-  cart.totalPrice = total;
-
+  
   await cart.save();
-
-  res.status(200).json({ message: "Cart updated successfully", cart });
+  await cart.populate('items.product', 'name price images stock');
+  
+  res.status(200).json({
+    success: true,
+    message: 'Product added to cart',
+    cart
+  });
 });
 
+const getCart = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  const cart = await Cart.findOne({ user: userId })
+    .populate('items.product', 'name price images stock sellerId');
+    
+  if (!cart) {
+    return res.status(200).json({
+      success: true,
+      cart: { items: [] },
+      total: 0
+    });
+  }
+  
+  const total = cart.items.reduce((sum, item) => 
+    sum + (item.product.price * item.quantity), 0
+  );
+  
+  res.status(200).json({
+    success: true,
+    cart,
+    total
+  });
+});
 
-export { addToCart };
+const removeFromCart = asyncHandler(async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user._id;
+  
+  const cart = await Cart.findOne({ user: userId });
+  if (!cart) {
+    res.status(404);
+    throw new Error('Cart not found');
+  }
+  
+  cart.items = cart.items.filter(item => 
+    item.product.toString() !== productId
+  );
+  
+  await cart.save();
+  await cart.populate('items.product', 'name price images stock');
+  
+  res.status(200).json({
+    success: true,
+    message: 'Product removed from cart',
+    cart
+  });
+});
+
+const clearCart = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+  
+  await Cart.findOneAndUpdate(
+    { user: userId },
+    { items: [] },
+    { new: true }
+  );
+  
+  res.status(200).json({
+    success: true,
+    message: 'Cart cleared successfully'
+  });
+});
+
+export { addToCart, getCart, removeFromCart, clearCart };

@@ -39,7 +39,6 @@ const authMiddleware = async (req, res, next) => {
   } catch (error) {
     console.error("Token verification error:", error);
     
-    // Clear invalid cookie
     if (req.cookies.token) {
       res.clearCookie("token");
     }
@@ -72,7 +71,6 @@ const checkAdmin = async (req, res, next) => {
   next();
 };
 
-// Optional: Combined role checker for flexibility
 const checkRole = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
