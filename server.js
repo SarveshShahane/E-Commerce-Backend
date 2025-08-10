@@ -5,7 +5,7 @@ dotenv.config();
 import cookieParser from "cookie-parser";
 import "./config/multer.js";
 import helmet from 'helmet'
-
+import cors from 'cors'
 import productRoutes from "./routes/product.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import paymentRoutes from "./routes/payment.router.js";
@@ -13,7 +13,7 @@ import cartRoutes from "./routes/cart.router.js";
 import orderRoutes from "./routes/order.routes.js";
 
 const app = express();
-
+app.use(cors());
 app.use(helmet({
   contentSecurityPolicy: false,
 })); 
