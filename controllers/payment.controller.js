@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import Stripe from "../config/stripe.js";
 import Product from "../models/product.model.js";
 import Order from "../models/order.model.js";
+import Cart from "../models/cart.model.js";
 import { orderConfirmation, paymentStatus } from "../utils/mails.utils.js";
 import User from "../models/user.model.js";
 const createCustomer = asyncHandler(async (req, res) => {
@@ -18,6 +19,11 @@ const createCustomer = asyncHandler(async (req, res) => {
 
 const attachPaymentMethod = asyncHandler(async (req, res) => {
   const { customer_id, payment_method_id } = req.body;
+
+  if (!customer_id || !payment_method_id) {
+    res.status(400);
+    throw new Error("Customer ID and Payment Method ID are required.");
+  }
 
   const paymentMethod = await Stripe.paymentMethods.attach(payment_method_id, {
     customer: customer_id,
@@ -136,6 +142,12 @@ const handleStripeWebhook = asyncHandler(async (req, res) => {
           },
         }));
         await Product.bulkWrite(bulkStockUpdate);
+
+        await Cart.findOneAndUpdate(
+          { user: userId },
+          { items: [] }
+        );
+
         console.log(`Order ${newOrder._id} created and stock updated.`);
         await orderConfirmation(user.email, newOrder);
       } catch (error) {
@@ -151,10 +163,19 @@ const handleStripeWebhook = asyncHandler(async (req, res) => {
         paymentIntentFailed.id,
         paymentIntentFailed.last_payment_error?.message
       );
-      var user = await User.findById(
-        paymentIntentFailed.metadata.userId
-      ).select("email");
-      await paymentStatus(user.email, paymentIntentFailed.amount, false);
+      
+      try {
+        if (paymentIntentFailed.metadata?.userId) {
+          var user = await User.findById(
+            paymentIntentFailed.metadata.userId
+          ).select("email");
+          if (user) {
+            await paymentStatus(user.email, paymentIntentFailed.amount / 100, false);
+          }
+        }
+      } catch (error) {
+        console.error("Error sending failed payment email:", error);
+      }
       break;
 
     default:

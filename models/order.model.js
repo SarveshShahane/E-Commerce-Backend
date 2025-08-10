@@ -34,14 +34,11 @@ const orderSchema = new mongoose.Schema(
       default: "Pending",
     },
     shippingAddress: {
-      type: {
-        street: { type: String, required: true },
-        city: { type: String, required: true },
-        state: { type: String, required: true },
-        postalCode: { type: String, required: true },
-        country: { type: String, required: true },
-      },
-      required: true,
+      street: { type: String, default: "" },
+      city: { type: String, default: "" },
+      state: { type: String, default: "" },
+      postalCode: { type: String, default: "" },
+      country: { type: String, default: "" },
     },
     shippedAt: {
       type: Date,

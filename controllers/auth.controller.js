@@ -7,35 +7,22 @@ import { verificationCode, verificationMail } from "../utils/mails.utils.js";
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, role = "buyer" } = req.body;
 
-  if (!name || !email || !password) {
-    res.status(400);
-    throw new Error("Please fill all fields");
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    res.status(400);
-    throw new Error("Please provide a valid email");
-  }
-
-  if (password.length < 6) {
-    res.status(400);
-    throw new Error("Password must be at least 6 characters long");
-  }
-
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     res.status(400);
     throw new Error("User already exists");
   }
+  
   const code = verificationCode();
   const codeExpiration = new Date(Date.now() + 15 * 60 * 1000);
+  
   try {
     await verificationMail(email, code);
   } catch (e) {
     res.status(500);
     throw new Error("Failed to send verification email");
   }
+  
   const hashedPassword = await bcrypt.hash(password, 12);
 
   const user = await User.create({
@@ -67,10 +54,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 const verifyOtp = asyncHandler(async (req, res) => {
   const { email, code } = req.body;
-  if (!email || !code) {
-    res.status(400);
-    throw new Error("Please provide correct email and OTP");
-  }
+  
   const user = await User.findOne({ email });
   if (!user) {
     res.status(400);
@@ -81,44 +65,45 @@ const verifyOtp = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("User already verified");
   }
-  if (
-    !user.verificationStatus &&
-    user.verificationCodeExpiration > Date.now()
-  ) {
-    if (code != user.verificationCode) {
-      res.status(400);
-      throw new Error("Invalid OTP.");
-    }
-    user.verificationStatus = true;
-    user.verificationCode = null;
-    user.verificationCodeExpiration = null;
-    await user.save();
-    const token = generateToken(user);
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000,
-    });
-    res.status(200).json({
-      success: true,
-      message: "Email verified successfully.",
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-    });
+
+  if (user.verificationCodeExpiration <= Date.now()) {
+    res.status(400);
+    throw new Error("OTP has expired. Please request a new one.");
   }
+
+  if (code != user.verificationCode) {
+    res.status(400);
+    throw new Error("Invalid OTP.");
+  }
+
+  user.verificationStatus = true;
+  user.verificationCode = null;
+  user.verificationCodeExpiration = null;
+  await user.save();
+
+  const token = generateToken(user);
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 24 * 60 * 60 * 1000,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Email verified successfully.",
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+    token,
+  });
 });
 
 const loginUser = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-
-  if (!email || !password) {
-    res.status(400);
-    throw new Error("Please fill all fields");
-  }
 
   const user = await User.findOne({ email });
   if (!user) {
@@ -126,7 +111,7 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new Error("Invalid credentials");
   }
   if(!user.verificationStatus){
-    res.status(201)
+    res.status(401);
     throw new Error('Please verify your email before logging in')
   }
 

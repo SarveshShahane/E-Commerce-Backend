@@ -20,11 +20,11 @@ const userSchema = new Schema({
   role: {
     type: String,
     enum: ["buyer", "seller", "admin"],
-    default: "user",
+    default: "buyer",
   },
   verificationCode: {
     type: String,
-    required: true,
+    default:null,
   },
   verificationStatus: {
     type: Boolean,
@@ -32,7 +32,7 @@ const userSchema = new Schema({
   },
   verificationCodeExpiration: {
     type: Date,
-    required: true,
+    default:null,
   },
   createdAt: {
     type: Date,

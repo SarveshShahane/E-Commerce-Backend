@@ -4,8 +4,8 @@ import dotenv from "dotenv";
 dotenv.config();
 import cookieParser from "cookie-parser";
 import "./config/multer.js";
+import helmet from 'helmet'
 
-//routes
 import productRoutes from "./routes/product.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import paymentRoutes from "./routes/payment.router.js";
@@ -14,15 +14,29 @@ import orderRoutes from "./routes/order.routes.js";
 
 const app = express();
 
+app.use(helmet({
+  contentSecurityPolicy: false,
+})); 
+
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-// Routes
+
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
+
 connectDB()
   .then(() => {
     app.listen(process.env.PORT, () => {
@@ -33,3 +47,12 @@ connectDB()
     console.error(`Failed to start server: ${error.message}`);
     process.exit(1);
   });
+
+app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message,
+    stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+  });
+});

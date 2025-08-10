@@ -120,12 +120,18 @@ POST /api/auth/register
 Content-Type: application/json
 
 {
-  "name": "John Doe",
-  "email": "john@example.com",
-  "password": "password123",
-  "role": "buyer"
+  "name": "John Doe",           // Required: 2-50 characters
+  "email": "john@example.com",  // Required: Valid email format
+  "password": "SecurePass123",  // Required: Min 6 chars, must contain uppercase, lowercase, and number
+  "role": "buyer"              // Optional: "buyer", "seller", or "admin" (default: "buyer")
 }
 ```
+
+**Validation Rules:**
+- `name`: String, 2-50 characters, trimmed
+- `email`: Valid email format, lowercase, trimmed
+- `password`: 6-128 characters, must contain at least one uppercase, lowercase, and number
+- `role`: One of "buyer", "seller", "admin"
 
 #### Verify OTP
 ```http
@@ -133,10 +139,14 @@ POST /api/auth/verify-otp
 Content-Type: application/json
 
 {
-  "email": "john@example.com",
-  "otp": "123456"
+  "email": "john@example.com",  // Required: Valid email format
+  "otp": "123456"              // Required: Exactly 6 digits
 }
 ```
+
+**Validation Rules:**
+- `email`: Valid email format, lowercase, trimmed
+- `otp`: Exactly 6 numeric characters
 
 #### Login User
 ```http
@@ -179,14 +189,22 @@ Authorization: Bearer <token>
 Content-Type: multipart/form-data
 
 {
-  "name": "Product Name",
-  "description": "Product Description",
-  "price": 99.99,
-  "category": "Electronics",
-  "stock": 50,
-  "images": [file1, file2]
+  "name": "Product Name",              // Required: 2-100 characters
+  "description": "Product Description", // Required: 10-2000 characters
+  "price": 99.99,                     // Required: $0.01-$999,999.99
+  "category": "Electronics",           // Required: 2-50 characters
+  "stock": 50,                        // Required: 0-99,999 integer
+  "images": [file1, file2]            // Required: 1-5 image files (JPEG, PNG, WebP, max 5MB each)
 }
 ```
+
+**Validation Rules:**
+- `name`: String, 2-100 characters, trimmed
+- `description`: String, 10-2000 characters, trimmed
+- `price`: Number, positive, 2 decimal places, $0.01-$999,999.99
+- `category`: String, 2-50 characters, trimmed
+- `stock`: Integer, 0-99,999
+- `images`: Array of image files, 1-5 files, JPEG/PNG/WebP, max 5MB each
 
 #### Update Product (Seller only)
 ```http
@@ -316,8 +334,72 @@ Authorization: Bearer <token>
 - **Password Security**: bcrypt hashing with salt rounds
 - **Email Verification**: OTP-based email verification
 - **Payment Security**: Stripe webhook signature verification
-- **Input Validation**: Server-side validation for all inputs
+- **Input Validation**: Comprehensive Joi validation for all endpoints
 - **Error Handling**: Comprehensive error handling middleware
+
+## ✅ Input Validation with Joi
+
+This project implements comprehensive input validation using Joi to ensure data integrity and security:
+
+### Validation Features
+- **Schema-based validation**: All endpoints have defined Joi schemas
+- **Detailed error messages**: Clear, user-friendly validation errors
+- **Data sanitization**: Automatic trimming, case conversion, and unknown field removal
+- **Type coercion**: Automatic type conversion where appropriate
+- **File upload validation**: MIME type, size, and count validation for file uploads
+
+### Validation Schemas
+
+#### Authentication Validation
+- **Registration**: Name (2-50 chars), email, strong password, role validation
+- **Login**: Email and password validation
+- **OTP Verification**: Email and 6-digit numeric OTP validation
+
+#### Product Validation
+- **Create**: Name, description (10-2000 chars), price ($0.01-$999,999.99), category, stock (0-99,999)
+- **Update**: Same as create but all fields optional, at least one field required
+- **Query**: Page, limit, category, search term, price range validation
+
+#### Cart Validation
+- **Add to Cart**: Valid MongoDB ObjectId for product, quantity (1-99)
+- **Remove**: Valid MongoDB ObjectId parameter validation
+
+#### Payment Validation
+- **Payment Intent**: Items array with product IDs and quantities, currency, Stripe customer ID
+- **Attach Payment Method**: Stripe customer ID and payment method ID patterns
+
+#### Order Validation
+- **Status Update**: Valid status enum values
+- **Query**: Pagination, status filter, date range validation
+
+### Validation Middleware
+
+The validation system uses custom middleware that:
+- Validates request body, query parameters, and URL parameters
+- Provides detailed error responses with field-specific messages
+- Sanitizes input data automatically
+- Prevents unknown fields from being processed
+
+### Example Validation Response
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "email",
+      "message": "Please provide a valid email address",
+      "value": "invalid-email"
+    },
+    {
+      "field": "password",
+      "message": "Password must contain at least one lowercase letter, one uppercase letter, and one number",
+      "value": "weak"
+    }
+  ]
+}
+```
 
 ## 📧 Email Templates
 
@@ -372,7 +454,47 @@ For production, configure Stripe webhooks:
 
 ## 🧪 Testing
 
-Use tools like Postman or Insomnia to test the API endpoints. Import the provided collection for quick testing.
+This project includes comprehensive unit tests to ensure code quality and reliability:
+
+### Test Coverage
+- **Unit Tests**: 50+ test cases covering critical functionality
+- **Validation Tests**: Complete Joi schema validation testing
+- **Middleware Tests**: Authentication and validation middleware
+- **Utility Tests**: Email services and helper functions
+- **Security Tests**: JWT token generation and validation
+
+### Running Tests
+```bash
+# Run all tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run specific test file
+npm test -- __tests__/validation/auth.validation.test.js
+```
+
+### Test Structure
+```
+__tests__/
+├── utils/           # Email utility tests
+├── validation/      # Joi schema validation tests  
+├── middlewares/     # Authentication & validation middleware tests
+└── setup.js        # Test environment configuration
+```
+
+### Testing Features
+- **Jest Framework**: Modern testing with ES module support
+- **Comprehensive Coverage**: All validation schemas and utilities
+- **Mock Testing**: External dependencies properly mocked
+- **Error Scenario Testing**: Edge cases and error conditions
+- **Professional Standards**: Industry-standard testing practices
+
+## 🧪 Testing
 
 ## 📝 Contributing
 

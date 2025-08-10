@@ -1,4 +1,5 @@
 import Product from "../models/product.model.js";
+import User from "../models/user.model.js";
 import Order from "../models/order.model.js";
 import asyncHandler from "express-async-handler";
 import stripe from "../config/stripe.js";
@@ -123,6 +124,7 @@ const cancelOrder = asyncHandler(async (req, res) => {
     console.log(`Stock restored for order ${order._id}`);
 
     order.status = "Cancelled";
+    order.cancelledAt = new Date();
     try {
       await orderCancel(order.user.email, order.products);
     } catch (error) {
@@ -153,8 +155,8 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  const order = await Order.findById(id);
-  const user = await User.findById({ _id: order.user }).select("email");
+  const order = await Order.findById(id).populate("user", "email");
+  
   if (!order) {
     res.status(404);
     throw new Error("Order not found");
@@ -174,10 +176,10 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 
   order.status = status;
   if (status === "Shipped") {
-    await orderShipped(email, order.products);
+    await orderShipped(order.user.email, order.products);
     order.shippedAt = new Date();
   } else if (status === "Delivered") {
-    await orderDelivered(email, order.products);
+    await orderDelivered(order.user.email, order.products);
     order.deliveredAt = new Date();
   }
 

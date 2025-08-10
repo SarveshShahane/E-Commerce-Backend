@@ -7,6 +7,8 @@
     "express": "^5.1.0",
     "express-async-handler": "^1.2.0",
     "express-router": "^0.0.1",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.16.4",
     "multer": "^2.0.2",
@@ -20,11 +22,15 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "test": "node __tests__/runner.js",
+    "test:watch": "echo \"Test watch mode not available\"",
+    "test:coverage": "echo \"Test coverage not available\"",
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {}
 }
